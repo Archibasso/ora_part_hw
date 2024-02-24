@@ -1,0 +1,112 @@
+-- Создание объектов
+-- range секционирование
+create table payment_range
+(
+  payment_id      number(30) not null,
+  from_client_id  number(30) not null,
+  to_client_id       number(30) not null,
+  status_id       varchar2(10 char) not null,
+  payment_date  date not null,
+  summa         number(20,2)
+)
+partition by range(payment_date)
+( partition pmin  values less than (date '2024-01-01'),
+  partition p01   values less than (date '2024-02-01'),
+  partition p02   values less than (date '2024-03-01'),
+  partition pmax values less than (maxvalue)
+);
+
+comment on column payment_range.payment_id is 'Unique ID';
+comment on column payment_range.from_client_id is 'Клиент - отправитель';
+comment on column payment_range.to_client_id is 'Клиент - получатель';
+comment on column payment_range.status_id is 'Статус платежа';
+comment on column payment_range.payment_date is 'Дата платежа';
+comment on column payment_range.summa is 'Сумма платежа';
+
+-- интервальное секционирование
+create table payment_interval
+(
+  payment_id      number(30) not null,
+  from_client_id  number(30) not null,
+  to_client_id       number(30) not null,
+  status_id       varchar2(10 char) not null,
+  payment_date  date not null,
+  summa         number(20,2)
+)
+partition by range(payment_date) 
+interval(numtoyminterval(1,'MONTH')) 
+(
+partition pmin values less than (date '2023-01-01') -- одна секция за любой период
+);
+
+comment on column payment_interval.payment_id is 'Unique ID';
+comment on column payment_interval.from_client_id is 'Клиент - отправитель';
+comment on column payment_interval.to_client_id is 'Клиент - получатель';
+comment on column payment_interval.status_id is 'Статус платежа';
+comment on column payment_interval.payment_date is 'Дата платежа';
+comment on column payment_interval.summa is 'Сумма платежа';
+
+-- list секционирование
+
+create table payment_list
+(
+  payment_id      number(30) not null,
+  from_client_id  number(30) not null,
+  to_client_id       number(30) not null,
+  status_id       varchar2(10 char) not null,
+  payment_date  date not null,
+  summa         number(20,2)
+)
+partition by list(status_id)
+( partition p_bad    values ('CANCELED','ERROR'),
+  partition p_payd values ('PAYED'),
+  partition p_notpayd   values ('NOT_PAYED'),
+  partition p_default values (default)
+);
+
+
+comment on column payment_list.payment_id is 'Unique ID';
+comment on column payment_list.from_client_id is 'Клиент - отправитель';
+comment on column payment_list.to_client_id is 'Клиент - получатель';
+comment on column payment_list.status_id is 'Статус платежа';
+comment on column payment_list.payment_date is 'Дата платежа';
+comment on column payment_list.summa is 'Сумма платежа';
+
+-- hash секционирование
+
+create table payment_hash
+(
+  payment_id      number(30) not null,
+  from_client_id  number(30) not null,
+  to_client_id       number(30) not null,
+  status_id       varchar2(10 char) not null,
+  payment_date  date not null,
+  summa         number(20,2)
+)
+partition by hash(payment_id)
+partitions 2;
+
+comment on column payment_hash.payment_id is 'Unique ID';
+comment on column payment_hash.from_client_id is 'Клиент - отправитель';
+comment on column payment_hash.to_client_id is 'Клиент - получатель';
+comment on column payment_hash.status_id is 'Статус платежа';
+comment on column payment_hash.payment_date is 'Дата платежа';
+comment on column payment_hash.summa is 'Сумма платежа';
+
+-- вставка данных
+-- для каждой таблицы выполняю запрос ниже несколько раз. Предварительно создан SEQUENCE с инкрементом 1 для генерации уникального ID платежа
+INSERT INTO payment_range (
+    payment_id,
+    from_client_id,
+    to_client_id,
+    status_id,
+    payment_date,
+    summa
+) VALUES (
+    SEQPAYMENTID.NEXTVAL,
+    dbms_random.value(2000, 7000),
+    dbms_random.value(1000, 5000),
+    'PAYED',
+    trunc((sysdate - dbms_random.value(20, 50)) ),
+    round(dbms_random.value(0, 10000), 2)
+);
